@@ -199,7 +199,10 @@ int crypto_run(struct fcrypt *fcr, struct kernel_crypt_op *kcop)
 	if (unlikely(cop->op != COP_ENCRYPT && cop->op != COP_DECRYPT)) {
 		ddebug(1, "invalid operation op=%u", cop->op);
 		return -EINVAL;
-	}
+	} else if (kcop->task != current || kcop->mm != current->mm) {
+		ddebug(1, "Yuo cannot call crypto_run from a different task/mm");
+		return -EINVAL;
+	} // avoid UAF by checking task and mm above
 
 	/* this also enters ses_ptr->sem */
 	ses_ptr = crypto_get_session_by_sid(fcr, cop->ses);
