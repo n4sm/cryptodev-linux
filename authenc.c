@@ -213,7 +213,7 @@ static int cryptodev_get_dst_len(struct crypt_auth_op *caop, struct csession *se
 
 	/* for TLS always add some padding so the total length is rounded to
 	 * cipher block size */
-	if (caop->flags & COP_FLAG_AEAD_TLS_TYPE) {
+	if (caop->flags & COP_FLAG_AEAD_TLS_TYPE && ses_ptr->cdata.blocksize) {
 		int bs = ses_ptr->cdata.blocksize;
 		dst_len += bs - (dst_len % bs);
 	}
