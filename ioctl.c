@@ -922,6 +922,8 @@ cryptodev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg_)
 
 	if (unlikely(!pcr))
 		BUG();
+	if (unlikely(!arg_))
+		return -EINVAL;
 
 	fcr = &pcr->fcrypt;
 
