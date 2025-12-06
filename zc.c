@@ -118,6 +118,10 @@ int adjust_sg_array(struct csession *ses, int pagecount)
 	struct page **pages;
 	int array_size;
 
+	// patch: limit maximum pages to prevent excessive memory allocation
+	if (unlikely(pagecount > 1024))
+		return -ENOMEM;
+
 	for (array_size = ses->array_size; array_size < pagecount;
 	     array_size *= 2)
 		;
