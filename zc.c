@@ -142,7 +142,7 @@ void release_user_pages(struct csession *ses)
 {
 	unsigned int i;
 
-	for (i = 0; i < ses->used_pages; i++) {
+	for (i = 0; i < ses->used_pages && ses->pages[i]; i++) {
 		if (!PageReserved(ses->pages[i]))
 			SetPageDirty(ses->pages[i]);
 
@@ -152,6 +152,7 @@ void release_user_pages(struct csession *ses)
 			ses->readonly_pages--;
 
 		put_page(ses->pages[i]);
+		ses->pages[i] = NULL;
 	}
 	ses->used_pages = 0;
 }
@@ -166,8 +167,16 @@ int get_userbuf(struct csession *ses,
                 struct scatterlist **src_sg,
                 struct scatterlist **dst_sg)
 {
-	int src_pagecount, dst_pagecount;
+	unsigned int src_pagecount, dst_pagecount;
 	int rc;
+	
+	/* Having a dst without having a src doesn't make sense to make 
+	 * and it actually prevents against UAF
+	 * */
+	if (!src && dst) {
+		dwarning(1, "No source but destination exists");
+		return -EINVAL;
+	}
 
 	/* Empty input is a valid option to many algorithms & is tested by NIST/FIPS */
 	/* Make sure NULL input has 0 length */
@@ -178,6 +187,16 @@ int get_userbuf(struct csession *ses,
 	/* Make sure NULL output has 0 length */
 	if (!dst && dst_len)
 		dst_len = 0;
+
+        // we avoid overflows
+        if ((unsigned long) src_len > (unsigned long) (src_len + src)) {
+                dwarning(1, "Invalid source or size");
+                return -EINVAL;
+        } else if ((unsigned long) dst_len > (unsigned long) (dst_len + dst)) {
+                dwarning(1, "Invalid source or size");
+                return -EINVAL;
+        }
+
 
 	src_pagecount = PAGECOUNT(src, src_len);
 	dst_pagecount = PAGECOUNT(dst, dst_len);
