@@ -932,6 +932,9 @@ cryptodev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg_)
 
 	fcr = &pcr->fcrypt;
 
+	if (unlikely(!fcr))
+		return -EINVAL;
+
 	switch (cmd) {
 	case CIOCASYMFEAT:
 		return put_user(0, p);
