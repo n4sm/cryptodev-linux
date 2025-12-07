@@ -473,6 +473,9 @@ int cryptodev_hash_copy(struct hash_data *dst, struct hash_data *src)
 	statesize = crypto_ahash_statesize(src->async.s);
 	if (unlikely(statesize <= 0)) {
 		return -EINVAL;
+	} else if (crypto_ahash_statesize(src->async.s) !=
+		   crypto_ahash_statesize(dst->async.s)) {
+		return -EINVAL;
 	}
 
 	statedata = kzalloc(statesize, GFP_KERNEL);
