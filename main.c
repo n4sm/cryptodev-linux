@@ -175,6 +175,15 @@ __crypto_run_zc(struct csession *ses_ptr, struct kernel_crypt_op *kcop)
 		return __crypto_run_std(ses_ptr, cop);
 	}
 
+	// if the src and dst are the same we need to clear the size otherwise
+	// the crypto api will iterate through the scatterlist causing a NULL
+	// pointer dereference and same issue if only one pointer is initialized
+	if (src_sg == dst_sg) {
+		cop->len = 0;
+	} else if ((src_sg && !dst_sg) || (!src_sg && dst_sg)) {
+		return 0;
+	}
+
 	ret = hash_n_crypt(ses_ptr, cop, src_sg, dst_sg, cop->len);
 
 	release_user_pages(ses_ptr);

@@ -54,7 +54,7 @@
 static int get_userbuf_tls(struct csession *ses, struct kernel_crypt_auth_op *kcaop,
 			struct scatterlist **dst_sg)
 {
-	int pagecount = 0;
+	unsigned int pagecount = 0;
 	struct crypt_auth_op *caop = &kcaop->caop;
 	int rc;
 
@@ -70,6 +70,12 @@ static int get_userbuf_tls(struct csession *ses, struct kernel_crypt_auth_op *kc
 	if (kcaop->dst_len == 0) {
 		dwarning(1, "Destination length cannot be zero");
 		return -EINVAL;
+	}
+
+	// we avoid overflows
+	if ((unsigned long) kcaop->dst_len > (unsigned long) (caop->dst + kcaop->dst_len)) {
+		dwarning(1, "Invalid destination or size");
+        return -EINVAL;
 	}
 
 	pagecount = PAGECOUNT(caop->dst, kcaop->dst_len);
@@ -105,8 +111,8 @@ static int get_userbuf_tls(struct csession *ses, struct kernel_crypt_auth_op *kc
 static int get_userbuf_srtp(struct csession *ses, struct kernel_crypt_auth_op *kcaop,
 			struct scatterlist **auth_sg, struct scatterlist **dst_sg)
 {
-	int pagecount, diff;
-	int auth_pagecount = 0;
+	unsigned int pagecount, diff;
+	unsigned int auth_pagecount = 0;
 	struct crypt_auth_op *caop = &kcaop->caop;
 	int rc;
 
@@ -128,6 +134,13 @@ static int get_userbuf_srtp(struct csession *ses, struct kernel_crypt_auth_op *k
 		dwarning(1, "Destination length cannot be zero");
 		return -EINVAL;
 	}
+
+	// we avoid overflows
+        if ((unsigned long) caop->auth_len > (unsigned long) (caop->auth_len + caop->auth_src)) {
+                dwarning(1, "Invalid destination or size");
+                return -EINVAL;
+        }
+
 
 	/* Note that in SRTP auth data overlap with data to be encrypted (dst)
          */
@@ -200,7 +213,7 @@ static int cryptodev_get_dst_len(struct crypt_auth_op *caop, struct csession *se
 
 	/* for TLS always add some padding so the total length is rounded to
 	 * cipher block size */
-	if (caop->flags & COP_FLAG_AEAD_TLS_TYPE) {
+	if (caop->flags & COP_FLAG_AEAD_TLS_TYPE && ses_ptr->cdata.blocksize) {
 		int bs = ses_ptr->cdata.blocksize;
 		dst_len += bs - (dst_len % bs);
 	}

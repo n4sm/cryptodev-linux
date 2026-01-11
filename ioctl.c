@@ -516,6 +516,11 @@ crypto_copy_hash_state(struct fcrypt *fcr, uint32_t dst_sid, uint32_t src_sid)
 		derr(1, "Failed to get sesssions with sid=0x%08X sid=%0x08X!",
 		     src_sid, dst_sid);
 		return ret;
+	} else if (crypto_ahash_statesize(dst_ses->hdata.async.s) != crypto_ahash_statesize(src_ses->hdata.async.s)) {
+		derr(1, "Mismatched state sizes between sessions 0x%08X and 0x%08X!",
+		     src_sid, dst_sid);
+		ret = -EINVAL;
+		return ret;
 	}
 
 	ret = cryptodev_hash_copy(&dst_ses->hdata, &src_ses->hdata);
@@ -922,6 +927,8 @@ cryptodev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg_)
 
 	if (unlikely(!pcr))
 		BUG();
+	if (unlikely(!arg_))
+		return -EINVAL;
 
 	fcr = &pcr->fcrypt;
 
